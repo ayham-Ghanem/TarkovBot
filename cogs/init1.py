@@ -38,12 +38,11 @@ class Init(commands.Cog):
         channel_id = Config.get_queue_channel()
         channel1 = ctx.guild.get_channel(int(channel_id))
         embed1 = discord.Embed(
-        title="Queue channel",
-        description=f"players in queue: 0/100",
+        title="Create lobby",
+        description=f"Click Host to host a match",
         color = 0x00ffff
     )
-        components1 = [Button(style=ButtonStyle.green,label='Join',custom_id="Join"),
-                    Button(style=ButtonStyle.red,label="Leave",custom_id="Leave")]
+        components1 = [Button(style=ButtonStyle.green,label='Host',custom_id="Host")]
 
         await channel1.send(embed = embed1, components=components1)
 
