@@ -2,6 +2,7 @@ from ast import Num
 from dis import disco
 import imp
 from tkinter.ttk import Style
+from turtle import update
 import discord
 import random
 from .db1 import DB1
@@ -10,6 +11,7 @@ import os
 from itertools import cycle
 import asyncio
 import aiomysql
+from .queue1 import Queue1
 import string
 from discord.utils import get     
 from discord_components import *
@@ -25,6 +27,7 @@ class Button_clicked(commands.Cog):
         self.funtions_dict = self.get_dict()
         self.client = client
         self.myDB = DB1(self.client)
+        self.queue = Queue1(self.client)
     
     
     @commands.Cog.listener()
@@ -78,10 +81,69 @@ class Button_clicked(commands.Cog):
 
 
     async def join_clicked(self,interaction):
-        print(interaction.component.id)
+        
+        person = interaction.user
+        if (await self.myDB.check_by_id(person)):
+            
+            embed = discord.Embed(
+            title="You should register first",
+            color = 0xffff00)  
+            await interaction.respond(embed=embed) 
+            return
+        else:
+            embed = discord.Embed(
+            title=f"{person} Joined the queue",
+            color = 0x0000ff)  
+            await interaction.respond(embed=embed) 
+
+        self.queue.lst_join(person)
+        await self.update_player_num(interaction)
+
+
 
     async def Leave_clicked(self,interaction):
-        print(interaction.component.id)
+        
+        person = interaction.user
+        if (await self.myDB.check_by_id(person)):
+            
+            embed = discord.Embed(
+            title="You should register first",
+            color = 0xffff00)  
+            await interaction.respond(embed=embed) 
+            return
+        else:
+            if(self.queue.check_in_lst(person)):
+                self.queue.lst_leave(person)
+                await self.update_player_num(interaction)
+                embed = discord.Embed(
+                title=f"{person} Left the queue",
+                color = 0x0000ff)  
+                await interaction.respond(embed=embed) 
+            else:
+                embed = discord.Embed(
+                title=f"{person} not in the queue",
+                color = 0xffff00)  
+                await interaction.respond(embed=embed) 
+                return
+            
+        
+        
+
+            
+
+    async def update_player_num(self,interaction):
+
+        players_num = len(self.queue.get_lst())
+
+        embed1 = discord.Embed(
+        title="Queue channel",
+        description=f"players in queue: {players_num}/100",
+        color = 0x00ffff
+    )
+        components1 = [Button(style=ButtonStyle.green,label='Join',custom_id="Join"),
+                    Button(style=ButtonStyle.red,label="Leave",custom_id="Leave")]
+
+        await interaction.message.edit(embed = embed1, components=components1)
     
 
 
