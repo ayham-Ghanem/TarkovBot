@@ -19,6 +19,8 @@ import Config
 class Queue1(commands.Cog):
 
     def __init__(self,client):
+        self.maps = Config.get_maps()
+        self.pics = Config.get_maps_pics()
         self.queue_size = 10
         self.queue_lst = []
         self.client = client
@@ -37,6 +39,9 @@ class Queue1(commands.Cog):
     def lst_leave(self,user):
         if(self.check_in_lst(user)):
             self.queue_lst.remove(user.id)
+
+
+    
 
 
 
