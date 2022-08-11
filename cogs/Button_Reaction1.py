@@ -116,8 +116,9 @@ class Button_clicked(commands.Cog):
 
     async def host_clicked(self,interaction):
         
+
+
         person = interaction.user
-       
         if (await self.myDB.check_by_id(person)):
             
             embed = discord.Embed(
@@ -126,7 +127,7 @@ class Button_clicked(commands.Cog):
             #await interaction.response.send_message(embed=embed) 
             return
         
-        
+    
         text_category = discord.utils.get(interaction.guild.categories, id= Config.get_custom_games_text_id())
         text_channel = await interaction.guild.create_text_channel(f'{interaction.user}', category=text_category)
 
@@ -258,12 +259,39 @@ class Host_Menu(discord.ui.View):
         
         await self.button.Leave_clicked(interaction)
 
+    @discord.ui.button(label='Game Modes' ,style=discord.ButtonStyle.blurple)
+    async def game_mode(self, interaction:discord.Interaction, button: discord.ui.Button):
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        if str(host) != str(interaction.user.id):
+            embed = discord.Embed(
+            title=f"Only the host can add limits",
+            color = 0xff00)  
+            await interaction.channel.send(embed=embed)
+            return
+
+        await interaction.response.send_modal(Host_modal())
 
     @discord.ui.button(label='Close Channel' ,style=discord.ButtonStyle.grey)
     async def Close_channel(self, interaction:discord.Interaction, button: discord.ui.Button):
         
         await self.button.Close_Channel_clicked(interaction)
 
+
+class Host_modal(discord.ui.Modal,title= 'Game mode / limits?'):
+
+    
+    answer = discord.ui.TextInput(label='any game modes?',style=discord.TextStyle.paragraph,placeholder='no 7.62 BP\nNo Pistols',required= False)
+
+
+    async def on_submit(self,interaction: discord.Interaction):
+        
+        if self.answer.value == '':
+            embed = discord.Embed(title= 'No Limits',description='' ,color=discord.Color.random())
+            await interaction.response.send_message(embed=embed)
+            return
+
+        embed = discord.Embed(title= 'Game modes / limits',description=self.answer ,color=discord.Color.random())
+        await interaction.response.send_message(embed=embed)
 
           
 
