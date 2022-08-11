@@ -10,7 +10,7 @@ import asyncio
 import aiomysql
 import string
 from discord.utils import get     
-from discord_components import *
+from discord.ui import *
 import Config
 
 
@@ -19,7 +19,6 @@ import Config
 class DB1(commands.Cog):
 
     def __init__(self,client):
-        self.myDB = asyncio.run(aiomysql.connect(host='localhost',user='root',password='ayham123123',db='treydb'))
         self.client = client
 
     async def in_dms(self, interaction):
@@ -107,6 +106,6 @@ class DB1(commands.Cog):
 
 
 
-def setup(client):
+async def setup(client):
     
-    client.add_cog(DB1(client))
+    await client.add_cog(DB1(client))

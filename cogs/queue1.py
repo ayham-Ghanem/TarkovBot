@@ -1,5 +1,6 @@
 from ast import Num
 from dis import disco
+import imp
 import queue
 from tkinter.ttk import Style
 import discord
@@ -11,19 +12,26 @@ import asyncio
 import aiomysql
 import string
 from discord.utils import get     
-from discord_components import *
+from discord.ui import *
 import Config
+from .singleton1 import Channels_dict, Queue_dict
 
 
 
 class Queue1(commands.Cog):
 
-    def __init__(self,client):
+    def __init__(self,client,interaction,new_channel):
+        self.client = client
         self.maps = Config.get_maps()
         self.pics = Config.get_maps_pics()
         self.queue_size = 10
+        self.host_id = interaction.user.id
         self.queue_lst = []
-        self.client = client
+        q_dict = Queue_dict()
+        channels_dict = Channels_dict()
+        q_dict.add(interaction.user.id,self)
+        channels_dict.add(interaction.user.id,new_channel.id)
+
 
     
     def get_lst(self):
@@ -45,7 +53,7 @@ class Queue1(commands.Cog):
 
 
 
-def setup(client):
+# async def setup(client):
     
-    client.add_cog(Queue1(client))
+#     await client.add_cog(Queue1(client))
     
