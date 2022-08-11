@@ -194,7 +194,7 @@ class Button_clicked(commands.Cog):
             color = 0xff00)  
             await interaction.channel.send(embed=embed)
             return
-        await interaction.message.delete() #TODO: bdha ysle7 btsht8l;sh
+        await interaction.message.delete() 
         embed = discord.Embed(
             title=f"GGs everyone",
             color = 0xffff00)  
