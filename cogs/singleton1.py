@@ -26,7 +26,7 @@ class Queue_dict(metaclass=SingletonMeta):
     
 
     def add(self,key,value):
-
+        # key is host id vlaue is queue obj
         self.dict[key] = value
     
     def get_queue(self,key):
@@ -44,7 +44,7 @@ class Channels_dict(metaclass=SingletonMeta):
         return self.dict
     
     def add(self,key,value):
-        #key is id vlaue is channel id
+        #key is id value is channel id
         self.dict[key] = value
     
     def find_by_value(self,value):
@@ -52,3 +52,23 @@ class Channels_dict(metaclass=SingletonMeta):
         keys = [k for k, v in self.dict.items() if v == value]
         return keys[0]
 
+class Hosts_set(metaclass=SingletonMeta):
+
+    def __init__(self):
+        self.set = set()
+    
+    def get_dict(self):
+        return self.set
+    
+    def add(self,host_id):
+        
+        self.set.add(host_id)
+    
+    def remove(self,host_id):
+        self.set.discard(host_id)
+    
+    def check_if_hosting(self,host_id):
+        
+        return host_id in self.set
+        
+        

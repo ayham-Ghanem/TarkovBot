@@ -26,6 +26,7 @@ class Queue1(commands.Cog):
         self.pics = Config.get_maps_pics()
         self.queue_size = queue_size
         self.host_id = interaction.user.id
+        self.players_in_team = 1
         self.queue_lst = []
         self.map = "RANDOM"
         q_dict = Queue_dict()
@@ -38,6 +39,9 @@ class Queue1(commands.Cog):
     def get_lst(self):
         return self.queue_lst
     
+    def change_players_in_team(self,num):
+        self.players_in_team = int(num)
+
     def change_map(self,map):
         self.map = map
     

@@ -116,6 +116,8 @@ class Button_clicked(commands.Cog):
 
     async def host_clicked(self,interaction):
         
+        
+
        
         
         Q_size = 10
@@ -126,6 +128,13 @@ class Button_clicked(commands.Cog):
             color = 0xffff00)  
             await interaction.response.send_message(embed=embed,ephemeral=True) 
             return
+        host_set = Hosts_set()
+        if(host_set.check_if_hosting(interaction.user.id)):
+            embed = discord.Embed(
+            title="You can't host more than one match",
+            color = 0xffff00)  
+            await interaction.response.send_message(embed=embed,ephemeral=True) 
+            return
         
     
         text_category = discord.utils.get(interaction.guild.categories, id= Config.get_custom_games_text_id())
@@ -133,7 +142,7 @@ class Button_clicked(commands.Cog):
 
         view = Host_Menu(self.client)
         embed = discord.Embed(
-        title=f"{interaction.user} lobby",
+        title=f"Free for all",
         description="",
         color = 0xffffff)
         embed.set_author(name=interaction.user)
@@ -142,6 +151,9 @@ class Button_clicked(commands.Cog):
         msg = await text_channel.send(embed=embed, view = view)
         await msg.pin()
 
+        
+
+        host_set.add(interaction.user.id)
         my_queue = Queue1(self.client,interaction,text_channel,Q_size)
 
         voice_category = discord.utils.get(interaction.guild.categories, id= Config.get_custom_games_voice_id())
@@ -170,7 +182,7 @@ class Button_clicked(commands.Cog):
             embed = discord.Embed(
             title="You should register first",
             color = 0xffff00)  
-            msg = await interaction.response.send_message(embed=embed,ephemeral=True) 
+            await interaction.response.send_message(embed=embed,ephemeral=True) 
             
             return
         else:
@@ -184,11 +196,10 @@ class Button_clicked(commands.Cog):
                 embed = discord.Embed(
                 title=f"{interaction.user} Left the queue",
                 color = 0x0000ff)  
-                msg = await interaction.response.send_message(embed=embed) 
+                await interaction.response.send_message(embed=embed) 
                 el_queue.lst_leave(interaction.user)
                 await self.update_player_num(interaction)
-                # await asyncio.sleep(2)
-                # await msg.delete()
+        
             else:
                 embed = discord.Embed(
                 title=f"{interaction.user} did not join the queue",
@@ -196,6 +207,8 @@ class Button_clicked(commands.Cog):
                 await interaction.response.send_message(embed=embed,ephemeral=True)
                 return
             
+
+
         
     async def Close_Channel_clicked(self,interaction):
         host = self.channels_dict.find_by_value(interaction.channel_id)
@@ -205,6 +218,10 @@ class Button_clicked(commands.Cog):
             color = 0xff00)  
             await interaction.channel.send(embed=embed,ephemeral=True)
             return
+        
+        host_set = Hosts_set()
+        host_set.remove(interaction.user.id)
+
         await interaction.message.delete() 
         embed = discord.Embed(
             title=f"GGs everyone",
@@ -228,20 +245,47 @@ class Button_clicked(commands.Cog):
     
 
     async def selected(self,interaction,select):
+
         view = Host_Menu(self.client)
         map = select.values[0]
-        map_url = self.pics.get(map)
         await interaction.message.delete()
         msg = await self.get_first_message(interaction)
         msg_copy = msg.embeds.copy()[0]
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        el_queue = self.queue_dict.get_queue(host)
+        el_queue.change_map(map)
         msg_copy.set_image(url= self.pics.get(map))
         await msg.edit(embed = msg_copy,view=view)
+
+
+    async def squads_selected(self,interaction,select):
+        view = Host_Menu(self.client)
+        number = int(select.values[0][0])
+        await interaction.message.delete()
+        msg = await self.get_first_message(interaction)
+        msg_copy = msg.embeds.copy()[0]
+        msg_image = msg_copy.image.url
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        el_queue = self.queue_dict.get_queue(host)
+        el_queue.change_players_in_team(number)
+        embed = discord.Embed(
+            title=select.values[0],
+            color = discord.Colour.random())
+        embed.set_author(name=interaction.user)
+        embed.set_image(url=msg_image)
+        embed.set_thumbnail(url=interaction.user.display_avatar)
+        await msg.edit(embed = embed,view=view)
+    
 
         
 
 
+        
+        
+
+
             
-    
+    #TODO: compy the main message instead
     async def update_player_num(self,interaction):
 
         host = self.channels_dict.find_by_value(interaction.channel_id)
@@ -272,6 +316,7 @@ class Host_Menu(discord.ui.View):
         self.client = client
         self.button = Button_clicked(self.client)
         self.value = None
+        self.channels_dict = Channels_dict()
 
     @discord.ui.button(label='Join' ,style=discord.ButtonStyle.green)
     async def Join(self,interaction:discord.Interaction, button: discord.ui.Button ):
@@ -286,8 +331,29 @@ class Host_Menu(discord.ui.View):
 
     @discord.ui.button(label='Select map' ,style=discord.ButtonStyle.blurple)
     async def Select_map(self, interaction:discord.Interaction, button: discord.ui.Button):
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        if (interaction.user.id != host):
+            embed = discord.Embed(
+            title=f"Only the host can select map",
+            color = 0xff00)  
+            await interaction.channel.send(embed=embed,ephemeral=True)
+            return
+
         maps_view = Maps_select_view(self.client)
-        await interaction.channel.send(view= maps_view)
+        await interaction.channel.send(view = maps_view)
+
+
+    @discord.ui.button(label='Squads' ,style=discord.ButtonStyle.blurple)
+    async def Select_squad(self, interaction:discord.Interaction, button: discord.ui.Button):
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        if (interaction.user.id != host):
+            embed = discord.Embed(
+            title=f"Only the host can change squads",
+            color = 0xff00)  
+            await interaction.channel.send(embed=embed,ephemeral=True)
+            return
+        squad_view = Squad_select_view(self.client)
+        await interaction.channel.send(view = squad_view)
 
 
 
@@ -309,11 +375,11 @@ class Host_Menu(discord.ui.View):
         
         await self.button.Close_Channel_clicked(interaction)
 
-
+#TODO: add to the main message (addfield)
 class Game_mode_Modal(discord.ui.Modal,title= 'Game mode / limits?'):
 
     
-    answer = discord.ui.TextInput(label='any game modes?',style=discord.TextStyle.paragraph,placeholder='no 7.62 BP\nNo Pistols\nall customs dorms',required= False)
+    answer = discord.ui.TextInput(label='any game modes?',style=discord.TextStyle.paragraph,placeholder='no 7.62 BP\nNo Pistols\nall customs dorms\n hide and seek?\n noobs only :)',required= False)
 
 
     async def on_submit(self,interaction: discord.Interaction):
@@ -334,6 +400,8 @@ class Maps_select_view(View):
         super().__init__(timeout=None)
         self.client = client
         self.button = Button_clicked(self.client)
+        self.channels_dict = Channels_dict()
+
 
     @discord.ui.select(options = [
         discord.SelectOption(label="Random",emoji= '❓',description="the bot selects a random map after filling the queue",default=True),
@@ -347,13 +415,44 @@ class Maps_select_view(View):
         discord.SelectOption(label="LIGHTHOUSE")
         ])
     async def select_callback(self,interaction,select):
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        if (interaction.user.id != host):
+            embed = discord.Embed(
+            title=f"Only the host can select map",
+            color = 0xff00)  
+            await interaction.channel.send(embed=embed,ephemeral=True)
+            return
 
         await self.button.selected(interaction,select)
         
-     
 
-    def get_value(self):
-        return self.value
+
+class Squad_select_view(View):
+
+    def __init__(self,client):
+        super().__init__(timeout=None)
+        self.client = client
+        self.button = Button_clicked(self.client)
+        self.channels_dict = Channels_dict()
+
+    @discord.ui.select(options = [
+        discord.SelectOption(label="1 man squad",default=True),
+        discord.SelectOption(label="2 man squad",),
+        discord.SelectOption(label="3 man squad",),
+        discord.SelectOption(label="4 man squad",),
+        discord.SelectOption(label="5 man squad",),
+        
+        ])
+    async def select_callback(self,interaction,select):
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        if (interaction.user.id != host):
+            embed = discord.Embed(
+            title=f"Only the host can select squads",
+            color = 0xff00)  
+            await interaction.channel.send(embed=embed,ephemeral=True)
+            return
+
+        await self.button.squads_selected(interaction,select)
 
 
 
