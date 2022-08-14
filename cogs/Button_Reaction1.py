@@ -1,21 +1,9 @@
-from ast import Delete, Num
-from cgitb import text
-from dis import disco
-import imp
-from re import I
-from tkinter.ttk import Style
-from turtle import update
+import time
 import discord
-import random
 from .db1 import DB1
-from discord.ext import commands, tasks
-import os
-from itertools import cycle
+from discord.ext import commands
 import asyncio
-import aiomysql
-from .queue1 import Queue1
-import string
-from discord.utils import get     
+from .queue1 import Queue1     
 from discord.ui import *
 import Config
 from .singleton1 import *
@@ -81,10 +69,9 @@ class Button_clicked(commands.Cog):
 
 #-----------------------------------------------------------------------------------
     async def join_clicked(self,interaction):
-        await self.update_player_num(interaction)
-        person = interaction.user
+        
 
-        if (await self.myDB.check_by_id(person)):
+        if (await self.myDB.check_by_id(interaction.user)):
             
             embed = discord.Embed(
             title="You should register first",
@@ -99,19 +86,22 @@ class Button_clicked(commands.Cog):
             if el_queue == None:
                 return
              
-            if not (el_queue.check_in_lst(person)):
-                el_queue.lst_join(person)
+            if not (el_queue.check_in_lst(interaction.user)):
+                el_queue.lst_join(interaction.user)
                 embed = discord.Embed(
-                title=f"{person} Joined the queue",
+                title=f"{interaction.user} Joined the queue",
                 color = 0x0000ff) 
-                await interaction.response.send_message(embed=embed) 
+                msg = await interaction.channel.send(embed=embed)
+                await self.update_main_msg(interaction)
+                await asyncio.sleep(2)
+                await msg.delete()
             else:
                 embed = discord.Embed(
-                title=f"{person} already in  the queue",
+                title=f"{interaction.user} already in  the queue",
                 color = 0x0000ff)
                 await interaction.response.send_message(embed=embed,ephemeral=True)
+
         
-        await self.update_player_num(interaction)
 
 
     async def host_clicked(self,interaction):
@@ -120,7 +110,7 @@ class Button_clicked(commands.Cog):
 
        
         
-        Q_size = 10
+        
         if (await self.myDB.check_by_id(interaction.user)):
             
             embed = discord.Embed(
@@ -142,8 +132,8 @@ class Button_clicked(commands.Cog):
 
         view = Host_Menu(self.client)
         embed = discord.Embed(
-        title=f"Free for all",
-        description="",
+        title=f"1 man squad",
+        description="Queue size = 10\n",
         color = 0xffffff)
         embed.set_author(name=interaction.user)
         embed.set_image(url='https://cdn.discordapp.com/attachments/487658114464612352/1008024714897260554/download.png')
@@ -154,7 +144,7 @@ class Button_clicked(commands.Cog):
         
 
         host_set.add(interaction.user.id)
-        my_queue = Queue1(self.client,interaction,text_channel,Q_size)
+        my_queue = Queue1(self.client,interaction,text_channel,10,msg.id)
 
         voice_category = discord.utils.get(interaction.guild.categories, id= Config.get_custom_games_voice_id())
         await interaction.guild.create_voice_channel(f'{interaction.user}', category=voice_category)
@@ -166,17 +156,9 @@ class Button_clicked(commands.Cog):
        
        
 
-    async def get_first_message(self,interaction):
-        pins = await interaction.channel.pins()
-        return pins[0]
-
-
-
-        
 
     async def Leave_clicked(self,interaction):
         
-        await self.update_player_num(interaction)
         if (await self.myDB.check_by_id(interaction.user)):
             
             embed = discord.Embed(
@@ -188,17 +170,17 @@ class Button_clicked(commands.Cog):
         else:
             host = self.channels_dict.find_by_value(interaction.channel_id)
             el_queue = self.queue_dict.get_queue(host)
-            if el_queue == None:
-                
-                return
+
             if(el_queue.check_in_lst(interaction.user)):
                 
+                el_queue.lst_leave(interaction.user)
                 embed = discord.Embed(
                 title=f"{interaction.user} Left the queue",
                 color = 0x0000ff)  
-                await interaction.response.send_message(embed=embed) 
-                el_queue.lst_leave(interaction.user)
-                await self.update_player_num(interaction)
+                msg = await interaction.channel.send(embed=embed) 
+                await self.update_main_msg(interaction)
+                await asyncio.sleep(2)
+                await msg.delete()
         
             else:
                 embed = discord.Embed(
@@ -216,7 +198,7 @@ class Button_clicked(commands.Cog):
             embed = discord.Embed(
             title=f"Only the host can close the channel",
             color = 0xff00)  
-            await interaction.channel.send(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
             return
         
         host_set = Hosts_set()
@@ -243,76 +225,91 @@ class Button_clicked(commands.Cog):
         await voice_channel.delete()
         await interaction.channel.delete()
     
-
+    #map selected
     async def selected(self,interaction,select):
 
-        view = Host_Menu(self.client)
         map = select.values[0]
         await interaction.message.delete()
-        msg = await self.get_first_message(interaction)
-        msg_copy = msg.embeds.copy()[0]
         host = self.channels_dict.find_by_value(interaction.channel_id)
         el_queue = self.queue_dict.get_queue(host)
         el_queue.change_map(map)
-        msg_copy.set_image(url= self.pics.get(map))
-        await msg.edit(embed = msg_copy,view=view)
+        await self.update_main_msg(interaction)
 
 
     async def squads_selected(self,interaction,select):
-        view = Host_Menu(self.client)
+       
         number = int(select.values[0][0])
         await interaction.message.delete()
-        msg = await self.get_first_message(interaction)
-        msg_copy = msg.embeds.copy()[0]
-        msg_image = msg_copy.image.url
         host = self.channels_dict.find_by_value(interaction.channel_id)
         el_queue = self.queue_dict.get_queue(host)
         el_queue.change_players_in_team(number)
-        embed = discord.Embed(
-            title=select.values[0],
-            color = discord.Colour.random())
-        embed.set_author(name=interaction.user)
-        embed.set_image(url=msg_image)
-        embed.set_thumbnail(url=interaction.user.display_avatar)
-        await msg.edit(embed = embed,view=view)
+        await self.update_main_msg(interaction)
     
 
         
-
+    async def queue_size_selected(self,interaction,answer):
+    
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        el_queue = self.queue_dict.get_queue(host)
+        el_queue.change_queue_size(int(answer.value))
+        await self.update_main_msg(interaction)
+        
+        
+    async def change_game_mode(self,interaction,answer):
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        el_queue = self.queue_dict.get_queue(host)
+        
+        if answer.value == '':
+            return
+        el_queue.game_mode = answer
+        await self.update_main_msg(interaction)
+        
+        
 
         
         
 
 
             
-    #TODO: compy the main message instead
-    async def update_player_num(self,interaction):
+    
+    async def update_main_msg(self,interaction):
 
-        host = self.channels_dict.find_by_value(interaction.channel_id)
-        el_queue = self.queue_dict.get_queue(host)
+        host_id = self.channels_dict.find_by_value(interaction.channel_id)
+        host = await self.client.fetch_user(host_id)
+        el_queue = self.queue_dict.get_queue(host_id)
         if el_queue == None:
             # print('el_queue == None')
             return
+
+        # start = time.time()
+
+        embed = discord.Embed(
+            title = f'{el_queue.players_in_team} man squad',
+            description= f'Queue size = {int(el_queue.queue_size)}\n',
+            color = discord.Colour.random())
+        embed.set_author(name=host)
+        embed.set_image(url=self.pics.get(el_queue.map))
+        embed.set_thumbnail(url=host.display_avatar)
+        for i in el_queue.queue_lst:
+            user = await self.client.fetch_user(i)
+            embed.add_field(name=' ㅤ\n',value= user.mention)
         
-            
+        embed.add_field(name= 'Game mode / limits: ', value=el_queue.game_mode,inline=False)
 
-        players_num = len(el_queue.get_lst())
+
         view = Host_Menu(self.client)
-        embed1 = discord.Embed(
-        title="Queue channel",
-        description=f"players in queue: {players_num}/10",
-        color = 0x00ffff
-    )
-
-        await interaction.message.edit(embed = embed1, view=view)
+        msg = await interaction.channel.fetch_message(el_queue.msg_id)
+        await msg.edit(embed = embed, view=view)
+        # end = time.time()
+        # print(end - start)
     
 
-
+#----------------------------------------------------------------------------------------------------x
 class Host_Menu(discord.ui.View):
 
     def __init__(self,client):
         
-        super().__init__()
+        super().__init__(timeout=None)
         self.client = client
         self.button = Button_clicked(self.client)
         self.value = None
@@ -336,7 +333,7 @@ class Host_Menu(discord.ui.View):
             embed = discord.Embed(
             title=f"Only the host can select map",
             color = 0xff00)  
-            await interaction.channel.send(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
             return
 
         maps_view = Maps_select_view(self.client)
@@ -350,10 +347,23 @@ class Host_Menu(discord.ui.View):
             embed = discord.Embed(
             title=f"Only the host can change squads",
             color = 0xff00)  
-            await interaction.channel.send(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
             return
         squad_view = Squad_select_view(self.client)
         await interaction.channel.send(view = squad_view)
+
+
+    @discord.ui.button(label='Queue size' ,style=discord.ButtonStyle.blurple)
+    async def Select_Queue(self, interaction:discord.Interaction, button: discord.ui.Button):
+        host = self.channels_dict.find_by_value(interaction.channel_id)
+        if (interaction.user.id != host):
+            embed = discord.Embed(
+            title=f"Only the host can Queue size",
+            color = 0xff00)  
+            await interaction.response.send_message(embed=embed,ephemeral=True)
+            return
+
+        await interaction.response.send_modal(Queue_size_Modal())
 
 
 
@@ -365,7 +375,7 @@ class Host_Menu(discord.ui.View):
             embed = discord.Embed(
             title=f"Only the host can add limits",
             color = 0xff00)  
-            await interaction.channel.send(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
             return
 
         await interaction.response.send_modal(Game_mode_Modal())
@@ -378,19 +388,29 @@ class Host_Menu(discord.ui.View):
 #TODO: add to the main message (addfield)
 class Game_mode_Modal(discord.ui.Modal,title= 'Game mode / limits?'):
 
-    
+   
     answer = discord.ui.TextInput(label='any game modes?',style=discord.TextStyle.paragraph,placeholder='no 7.62 BP\nNo Pistols\nall customs dorms\n hide and seek?\n noobs only :)',required= False)
 
 
     async def on_submit(self,interaction: discord.Interaction):
-        
-        if self.answer.value == '':
-            embed = discord.Embed(title= 'No Limits',description='' ,color=discord.Color.random())
-            await interaction.response.send_message(embed=embed)
-            return
+        buttonR = Button_clicked(interaction.client)
+        await interaction.response.send_message('done',ephemeral=True)
+        await buttonR.change_game_mode(interaction,self.answer)
 
-        embed = discord.Embed(title= 'Game modes / limits',description=self.answer ,color=discord.Color.random())
-        await interaction.response.send_message(embed=embed)
+
+class Queue_size_Modal(discord.ui.Modal,title= 'Queue size'):
+
+   
+    answer = discord.ui.TextInput(label='2 digits num',style=discord.TextStyle.short,placeholder='10 by default',required= True,max_length=2)
+
+
+    async def on_submit(self,interaction: discord.Interaction):
+        buttonR = Button_clicked(interaction.client)
+        if not self.answer.value.isdigit():
+            await interaction.response.send_message('please enter numbers only', ephemeral= True)
+            return
+        await interaction.response.send_message('done',ephemeral=True)
+        await buttonR.queue_size_selected(interaction,self.answer)
 
           
 
@@ -420,7 +440,7 @@ class Maps_select_view(View):
             embed = discord.Embed(
             title=f"Only the host can select map",
             color = 0xff00)  
-            await interaction.channel.send(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
             return
 
         await self.button.selected(interaction,select)
@@ -449,7 +469,7 @@ class Squad_select_view(View):
             embed = discord.Embed(
             title=f"Only the host can select squads",
             color = 0xff00)  
-            await interaction.channel.send(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
             return
 
         await self.button.squads_selected(interaction,select)

@@ -20,13 +20,15 @@ from .singleton1 import Channels_dict, Queue_dict
 
 class Queue1(commands.Cog):
 
-    def __init__(self,client,interaction,new_channel,queue_size):
+    def __init__(self,client,interaction,new_channel,queue_size,msg_id):
         self.client = client
         self.maps = Config.get_maps()
         self.pics = Config.get_maps_pics()
         self.queue_size = queue_size
         self.host_id = interaction.user.id
         self.players_in_team = 1
+        self.msg_id = msg_id
+        self.game_mode = 'No Limits'
         self.queue_lst = []
         self.map = "RANDOM"
         q_dict = Queue_dict()
@@ -44,6 +46,9 @@ class Queue1(commands.Cog):
 
     def change_map(self,map):
         self.map = map
+
+    def change_queue_size(self,num):
+        self.queue_size = num
     
     def check_in_lst(self,user):
         return user.id in self.queue_lst
