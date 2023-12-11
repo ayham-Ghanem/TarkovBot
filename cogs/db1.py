@@ -22,7 +22,7 @@ class DB1(commands.Cog):
         self.client = client
 
     async def in_dms(self, interaction):
-        
+
         person = interaction.user
         embed = discord.Embed(
         title="Please enter you're EFT username",
@@ -43,10 +43,9 @@ class DB1(commands.Cog):
 
 
 
-    async def register(self,interaction):
+    async def register(self, interaction: discord.Interaction, player_username: str):
         person = interaction.user
         myDB = await aiomysql.connect(host='localhost',user='root',password='ayham123123',db='treydb')
-        player_username = await self.in_dms(interaction)
         if player_username == None:
             return
         #registration process
@@ -56,12 +55,13 @@ class DB1(commands.Cog):
             embed = discord.Embed(
             title=f"Successfully Registered as {player_username}",
             color = 0xffffff)
-            await person.send(embed=embed)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
+
        
 
 
     #returns true if the player is not in the database
-    async def check_by_id(self,person):
+    async def check_by_id(self,person: discord.Member):
         
         myDB= await aiomysql.connect(host='localhost',user='root',password='ayham123123',db='treydb')
         async with myDB.cursor() as cur:
@@ -84,10 +84,9 @@ class DB1(commands.Cog):
 
 
 
-    async def change_username(self,interaction):
+    async def change_username(self,interaction:discord.Interaction,player_username: str):
         person = interaction.user
         myDB= await aiomysql.connect(host='localhost',user='root',password='ayham123123',db='treydb')
-        player_username = await self.in_dms(interaction)
         if player_username == None:
             return
         
@@ -97,13 +96,9 @@ class DB1(commands.Cog):
             embed = discord.Embed(
             title=f"Successfully Registered as {player_username}",
             color = 0xffffff)
-            await person.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
+
         
-
-
-
-
-
 
 
 async def setup(client):
