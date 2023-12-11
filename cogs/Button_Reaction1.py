@@ -81,6 +81,11 @@ class Button_clicked(commands.Cog):
             el_queue = self.queue_dict.get_queue(host)
             if el_queue == None:
                 return
+            if(el_queue.is_full()):
+                embed = discord.Embed(
+                    title=f"The queue is full",
+                    color=0x0000ff)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
 
             if not (el_queue.check_in_lst(interaction.user)):
                 el_queue.lst_join(interaction.user)
@@ -124,8 +129,8 @@ class Button_clicked(commands.Cog):
 
         view = Host_Menu(self.client)
         embed = discord.Embed(
-        title=f"1 man squad",
-        description="Queue size = 10\n",
+        title=f"5 man squad ",
+        description="",
         color = 0xffffff)
         embed.set_author(name=interaction.user.display_name)
         embed.set_image(url='https://cdn.discordapp.com/attachments/487658114464612352/1008024714897260554/download.png')
@@ -242,6 +247,7 @@ class Button_clicked(commands.Cog):
         host = self.channels_dict.find_by_value(interaction.channel_id)
         el_queue = self.queue_dict.get_queue(host)
         el_queue.change_players_in_team(number)
+        el_queue
         await self.update_main_msg(interaction)
 
 
@@ -289,7 +295,7 @@ class Button_clicked(commands.Cog):
 
         teams_strings = []
         if (el_queue.players_in_team > 1):
-            for i in range(1,el_queue.players_in_team +1):
+            for i in range(1,3):
                 teams_strings.append(f'Team {i}\n')
 
             while (len(players) >0):
@@ -332,6 +338,9 @@ class Button_clicked(commands.Cog):
         msg = await interaction.channel.fetch_message(el_queue.msg_id)
         await msg.delete()
         await interaction.channel.send(embed=embed)
+        #TODO: move players to their team's voice channel
+        #TODO:  register in games DB
+        #TODO:
 
 
 
@@ -362,7 +371,7 @@ class Button_clicked(commands.Cog):
 
         embed = discord.Embed(
             title = f'{el_queue.players_in_team} man squad',
-            description= f'Queue size = {int(el_queue.queue_size)}\n',
+            description= f'',
             color = discord.Colour.random())
         embed.set_author(name=host)
         embed.set_image(url=self.pics.get(el_queue.map))
@@ -434,7 +443,7 @@ class Host_Menu(discord.ui.View):
     @discord.ui.button(label='Squads' ,style=discord.ButtonStyle.blurple)
     async def Select_squad(self, interaction:discord.Interaction, button: discord.ui.Button):
         host = self.channels_dict.find_by_value(interaction.channel_id)
-        if (interaction.user.id != host):
+        if interaction.user.id != host:
             embed = discord.Embed(
             title=f"Only the host can change squads",
             color = 0xff00)
@@ -444,17 +453,17 @@ class Host_Menu(discord.ui.View):
         await interaction.channel.send(view = squad_view)
 
 
-    @discord.ui.button(label='Queue size' ,style=discord.ButtonStyle.blurple)
-    async def Select_Queue(self, interaction:discord.Interaction, button: discord.ui.Button):
-        host = self.channels_dict.find_by_value(interaction.channel_id)
-        if (interaction.user.id != host):
-            embed = discord.Embed(
-            title=f"Only the host can Queue size",
-            color = 0xff00)
-            await interaction.response.send_message(embed=embed,ephemeral=True)
-            return
-
-        await interaction.response.send_modal(Queue_size_Modal())
+    # @discord.ui.button(label='Queue size' ,style=discord.ButtonStyle.blurple)
+    # async def Select_Queue(self, interaction:discord.Interaction, button: discord.ui.Button):
+    #     host = self.channels_dict.find_by_value(interaction.channel_id)
+    #     if (interaction.user.id != host):
+    #         embed = discord.Embed(
+    #         title=f"Only the host can Queue size",
+    #         color = 0xff00)
+    #         await interaction.response.send_message(embed=embed,ephemeral=True)
+    #         return
+    #
+    #     await interaction.response.send_modal(Queue_size_Modal())
 
 
 
@@ -473,10 +482,27 @@ class Host_Menu(discord.ui.View):
 
     @discord.ui.button(label='Close Channel' ,style=discord.ButtonStyle.grey)
     async def Close_channel(self, interaction:discord.Interaction, button: discord.ui.Button):
-
+        channels_dict = Channels_dict()
+        host = channels_dict.find_by_value(interaction.channel.id)
+        if str(host) != str(interaction.user.id):
+            embed = discord.Embed(
+            title=f"Only the host can close the channel",
+            color = 0xff00)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
         await self.button.Close_Channel_clicked(interaction)
 
-#TODO: add to the main message (addfield)
+    @discord.ui.button(label='Start Game', style=discord.ButtonStyle.success)
+    async def start_game(self, interaction: discord.Interaction, button: discord.ui.Button):
+        channels_dict = Channels_dict()
+        host = channels_dict.find_by_value(interaction.channel.id)
+        if str(host) != str(interaction.user.id):
+            embed = discord.Embed(
+            title=f"Only the host can start the game",
+            color = 0xff00)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
+        await self.button.start_game(interaction)
+
+
 class Game_mode_Modal(discord.ui.Modal,title= 'Game mode / limits?'):
 
 
@@ -535,7 +561,7 @@ class Maps_select_view(View):
 
 
     @discord.ui.select(options = [
-        discord.SelectOption(label="Random",emoji= '❓',description="the bot selects a random map after filling the queue"),
+        discord.SelectOption(label="RANDOM",emoji= '❓',description="the bot selects a random map after filling the queue"),
         discord.SelectOption(label="FACTORY"),
         discord.SelectOption(label="CUSTOMS"),
         discord.SelectOption(label="WOODS"),

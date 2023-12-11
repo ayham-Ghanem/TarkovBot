@@ -25,7 +25,7 @@ class Queue1():
         self.pics = Config.get_maps_pics()
         self.queue_size = queue_size
         self.host_id = interaction.user.id
-        self.players_in_team = 1
+        self.players_in_team = 5
         self.msg_id = msg_id
         self.game_mode = 'No Limits'
         self.queue_lst = []
@@ -38,8 +38,12 @@ class Queue1():
     def get_lst(self):
         return self.queue_lst
 
+    def is_full(self):
+        return len(self.queue_lst) >= self.queue_size
+
     def change_players_in_team(self, num):
         self.players_in_team = int(num)
+        self.queue_size = self.players_in_team*2
 
     def change_map(self, map):
         self.map = map
@@ -59,6 +63,10 @@ class Queue1():
     def lst_leave(self, user):
         if self.check_in_lst(user):
             self.queue_lst.remove(user.id)
+
+
+
+
 
 # async def setup(client):
 

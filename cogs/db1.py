@@ -55,7 +55,7 @@ class DB1(commands.Cog):
             embed = discord.Embed(
             title=f"Successfully Registered as {player_username}",
             color = 0xffffff)
-            await interaction.response.send(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed,ephemeral=True)
 
        
 
