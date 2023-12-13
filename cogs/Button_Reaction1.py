@@ -336,21 +336,31 @@ class Button_clicked(commands.Cog):
         msg = await interaction.channel.fetch_message(el_queue.msg_id)
         await msg.delete()
         await interaction.channel.send(embed=embed,view=view)
-        
+
 
         voice_category = discord.utils.get(interaction.guild.categories, id=Config.get_custom_games_voice_id())
         voice_channel1 = await interaction.guild.create_voice_channel(f'{interaction.user.display_name} Team 1',category=voice_category)
         voice_channel2 = await interaction.guild.create_voice_channel(f'{interaction.user.display_name} Team 2',category=voice_category)
+        voice_category = discord.utils.get(interaction.guild.categories, id=Config.get_custom_games_voice_id())
+        for i in voice_category.voice_channels:
+            if i.name == host.display_name:
+                in_main_voice_channel = i.members
+                break
+
+
         for member1 in teams_players[0]:
-            await member1.move_to(voice_channel1)
+            if member1 in in_main_voice_channel:
+                await member1.move_to(voice_channel1)
 
 
         for member2 in teams_players[1]:
-            await member2.move_to(voice_channel2)
+            if member2 in in_main_voice_channel:
+                await member2.move_to(voice_channel2)
 
 
 
-
+        #TODO: fix players names
+        #TODO: implement private session
 
 
 
