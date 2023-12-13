@@ -102,8 +102,6 @@ class Button_clicked(commands.Cog):
                 color = 0x0000ff)
                 await interaction.response.send_message(embed=embed,ephemeral=True)
 
-        if(el_queue.start_Check()):
-            await self.start_game(interaction)
 
 
     async def host_clicked(self, interaction: discord.Interaction):
@@ -188,8 +186,7 @@ class Button_clicked(commands.Cog):
                 await interaction.response.send_message(embed=embed,ephemeral=True)
                 return
 
-            # if(el_queue.start_Check()):
-            #     await self.start_game(interaction)
+
 
 
 
@@ -218,15 +215,15 @@ class Button_clicked(commands.Cog):
         await interaction.response.send_message(embed=embed1)
         await interaction.channel.send(embed=embed)
         voice_category = discord.utils.get(interaction.guild.categories, id= Config.get_custom_games_voice_id())
-
-        for i in voice_category.voice_channels:
-            if i.name == interaction.user.display_name:
-                voice_channel = i
-                break
-
-
         await asyncio.sleep(5)
-        await voice_channel.delete()
+        counter = 0
+        for i in voice_category.voice_channels:
+            if i.name == interaction.user.display_name or interaction.user.display_name+ str(" Team 1") or interaction.user.display_name + str(" Team 2"):
+                counter += 1
+                await i.delete()
+                if counter == 3:
+                    break
+
         await interaction.channel.delete()
 
     #map selected
@@ -292,7 +289,7 @@ class Button_clicked(commands.Cog):
             await myDB.commit()
             in_game_names = await cur.fetchall()
 
-
+        teams_players = [[], []]
         teams_strings = []
         if (el_queue.players_in_team > 1):
             for i in range(1,3):
@@ -304,18 +301,19 @@ class Button_clicked(commands.Cog):
                     if(len(players) <= 0):
                         break
 
-                    player = random.choice(el_queue.queue_lst)
-                    user = await self.client.fetch_user(player)
-                    teams_strings[j] = teams_strings[j] + str(user.mention)
+                    player = random.choice(el_queue.queue_lst)   #player's id
+                    member = await interaction.guild.fetch_member(player)
+                    teams_strings[j] = teams_strings[j] + str(member.mention)
+                    teams_players[j].append(member)
                     players.remove(player)
 
         else:
             for i in el_queue.queue_lst:
-                user = await self.client.fetch_user(i)
-                teams_strings.append(user.mention)
+                member = await self.client.fetch_user(i)
+                teams_strings.append(member.mention)
 
 
-
+        view = close_channel_button(self.client)
 
         embed = discord.Embed(
             title = f'Match started',
@@ -337,10 +335,21 @@ class Button_clicked(commands.Cog):
 
         msg = await interaction.channel.fetch_message(el_queue.msg_id)
         await msg.delete()
-        await interaction.channel.send(embed=embed)
-        #TODO: move players to their team's voice channel
-        #TODO:  register in games DB
-        #TODO:
+        await interaction.channel.send(embed=embed,view=view)
+        
+
+        voice_category = discord.utils.get(interaction.guild.categories, id=Config.get_custom_games_voice_id())
+        voice_channel1 = await interaction.guild.create_voice_channel(f'{interaction.user.display_name} Team 1',category=voice_category)
+        voice_channel2 = await interaction.guild.create_voice_channel(f'{interaction.user.display_name} Team 2',category=voice_category)
+        for member1 in teams_players[0]:
+            await member1.move_to(voice_channel1)
+
+
+        for member2 in teams_players[1]:
+            await member2.move_to(voice_channel2)
+
+
+
 
 
 
@@ -480,16 +489,7 @@ class Host_Menu(discord.ui.View):
 
         await interaction.response.send_modal(Game_mode_Modal())
 
-    @discord.ui.button(label='Close Channel' ,style=discord.ButtonStyle.grey)
-    async def Close_channel(self, interaction:discord.Interaction, button: discord.ui.Button):
-        channels_dict = Channels_dict()
-        host = channels_dict.find_by_value(interaction.channel.id)
-        if str(host) != str(interaction.user.id):
-            embed = discord.Embed(
-            title=f"Only the host can close the channel",
-            color = 0xff00)
-            await interaction.response.send_message(embed=embed,ephemeral=True)
-        await self.button.Close_Channel_clicked(interaction)
+
 
     @discord.ui.button(label='Start Game', style=discord.ButtonStyle.success)
     async def start_game(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -501,6 +501,18 @@ class Host_Menu(discord.ui.View):
             color = 0xff00)
             await interaction.response.send_message(embed=embed,ephemeral=True)
         await self.button.start_game(interaction)
+
+    @discord.ui.button(label='Close Channel', style=discord.ButtonStyle.grey)
+    async def Close_channel1(self, interaction: discord.Interaction, button: discord.ui.Button):
+        channels_dict = Channels_dict()
+        host = channels_dict.find_by_value(interaction.channel.id)
+        if str(host) != str(interaction.user.id):
+            embed = discord.Embed(
+                title=f"Only the host can close the channel",
+                color=0xff00)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        await self.button.Close_Channel_clicked(interaction)
+
 
 
 class Game_mode_Modal(discord.ui.Modal,title= 'Game mode / limits?'):
@@ -549,6 +561,23 @@ class change_username_Modal(discord.ui.Modal,title= 'Tarkov Bot'):
         await buttonR.change_username_helper(interaction,str(self.answer))
 
 
+
+
+class close_channel_button(discord.ui.View):
+    def __init__(self,client):
+        super().__init__()
+        self.client = client
+        self.button = Button_clicked(self.client)
+    @discord.ui.button(label='Close Channel', style=discord.ButtonStyle.grey)
+    async def Close_channel1(self, interaction: discord.Interaction, button: discord.ui.Button):
+        channels_dict = Channels_dict()
+        host = channels_dict.find_by_value(interaction.channel.id)
+        if str(host) != str(interaction.user.id):
+            embed = discord.Embed(
+                title=f"Only the host can close the channel",
+                color=0xff00)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        await self.button.Close_Channel_clicked(interaction)
 
 
 class Maps_select_view(View):
