@@ -218,7 +218,7 @@ class Button_clicked(commands.Cog):
         await asyncio.sleep(5)
         counter = 0
         for i in voice_category.voice_channels:
-            if i.name == interaction.user.display_name or interaction.user.display_name+ str(" Team 1") or interaction.user.display_name + str(" Team 2"):
+            if i.name == interaction.user.display_name or i.name == interaction.user.display_name+ str(" Team 1") or i.name == interaction.user.display_name + str(" Team 2"):
                 counter += 1
                 await i.delete()
                 if counter == 3:
@@ -278,7 +278,16 @@ class Button_clicked(commands.Cog):
         else:
             players = el_queue.get_lst()[:el_queue.queue_size]
 
+        if len(players) == 0:
+            embed = discord.Embed(
+                title=f"the queue is empty",
+                color=0xff00)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+
         myDB = await aiomysql.connect(host='localhost',user='root',password='ayham123123',db='treydb')
+
 
         db_command = f"SELECT `username` FROM `players` WHERE player = '{players[0]}'"
         for i in players[1:]:
@@ -288,6 +297,11 @@ class Button_clicked(commands.Cog):
             await cur.execute(db_command)
             await myDB.commit()
             in_game_names = await cur.fetchall()
+            in_game_names_list = []
+            for i in in_game_names:
+                in_game_names_list.append(''.join(i))
+
+
 
         teams_players = [[], []]
         teams_strings = []
@@ -330,7 +344,7 @@ class Button_clicked(commands.Cog):
 
 
 
-        embed.add_field(name= 'EFT names', value= in_game_names,inline=True)
+        embed.add_field(name= 'EFT names', value= in_game_names_list,inline=True)
         embed.add_field(name= 'Game mode / limits: ', value=el_queue.game_mode,inline=False)
 
         msg = await interaction.channel.fetch_message(el_queue.msg_id)
@@ -359,7 +373,7 @@ class Button_clicked(commands.Cog):
 
 
 
-        #TODO: fix players names
+
         #TODO: implement private session
 
 
